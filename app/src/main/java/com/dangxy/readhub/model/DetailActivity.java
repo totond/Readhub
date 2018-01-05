@@ -14,10 +14,14 @@ import com.dangxy.readhub.R;
 import com.dangxy.readhub.base.BaseActivity;
 import com.dangxy.readhub.utils.ViewUtils;
 import com.jakewharton.rxbinding2.view.RxView;
+import com.tbruyelle.rxpermissions2.RxPermissions;
 
 import butterknife.BindView;
 import butterknife.OnClick;
+import io.reactivex.ObservableSource;
+import io.reactivex.annotations.NonNull;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 
 /**
  * @author dangxy99
@@ -48,13 +52,75 @@ public class DetailActivity extends BaseActivity {
         tvDetailTitle.setText(title);
         summaryTitle.setText(summary);
 
-        RxView.clicks(rlShare).subscribe(new Consumer<Object>() {
+//        RxView.clicks(rlShare).subscribe(new Consumer<Object>() {
+//            @Override
+//            public void accept(Object o) throws Exception {
+//                Bitmap bitmap = com.dangxy.readhub.utils.ViewUtils.createBitmapFromView(llContent);
+//                String path =  ViewUtils.saveBitmap(mContext, bitmap);
+//                if(!TextUtils.isEmpty(path)){
+//                    Snackbar.make(rlShare, "保存成功~", Snackbar.LENGTH_SHORT).setAction("知道了", new View.OnClickListener() {
+//                        @Override
+//                        public void onClick(View view) {
+//                        }
+//                    }).show();
+//                }
+//            }
+//        });
+        //请求权限并保存截图
+        RxView.clicks(rlShare)
+                //将流转化为请求权限
+                .flatMap(new Function<Object, ObservableSource<Boolean>>() {
+                    @Override
+                    public ObservableSource<Boolean> apply(Object o) throws Exception {
+                        RxPermissions rxPermissions = new RxPermissions(DetailActivity.this);
+                        return rxPermissions.request("android.permission.WRITE_EXTERNAL_STORAGE");
+                    }
+                })
+                //处理结果
+                .subscribe(new Consumer<Boolean>() {
+                    @Override
+                        public void accept(Boolean granted) throws Exception {
+                            if (granted) {
+                                Bitmap bitmap = com.dangxy.readhub.utils.ViewUtils.createBitmapFromView(llContent);
+                                String path = ViewUtils.saveBitmap(mContext, bitmap);
+                                if (!TextUtils.isEmpty(path)) {
+                                    Snackbar.make(rlShare, "保存成功~", Snackbar.LENGTH_SHORT).setAction("知道了", new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                        }
+                                    }).show();
+                                }
+                            } else {
+                                Snackbar.make(rlShare, "保存失败，没有权限~", Snackbar.LENGTH_SHORT).setAction("知道了", new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                    }
+                                }).show();
+                            }
+                        }
+                    }
+                );
+
+    }
+
+
+    private void savePicture() {
+        RxPermissions rxPermissions = new RxPermissions(this);
+        rxPermissions.request("android.permission.WRITE_EXTERNAL_STORAGE").subscribe(new Consumer<Boolean>() {
             @Override
-            public void accept(Object o) throws Exception {
-                Bitmap bitmap = com.dangxy.readhub.utils.ViewUtils.createBitmapFromView(llContent);
-                String path =  ViewUtils.saveBitmap(mContext, bitmap);
-                if(!TextUtils.isEmpty(path)){
-                    Snackbar.make(rlShare, "保存成功~", Snackbar.LENGTH_SHORT).setAction("知道了", new View.OnClickListener() {
+            public void accept(@NonNull Boolean granted) throws Exception {
+                if (granted) {
+                    Bitmap bitmap = com.dangxy.readhub.utils.ViewUtils.createBitmapFromView(llContent);
+                    String path = ViewUtils.saveBitmap(mContext, bitmap);
+                    if (!TextUtils.isEmpty(path)) {
+                        Snackbar.make(rlShare, "保存成功~", Snackbar.LENGTH_SHORT).setAction("知道了", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                            }
+                        }).show();
+                    }
+                } else {
+                    Snackbar.make(rlShare, "保存失败，没有权限~", Snackbar.LENGTH_SHORT).setAction("知道了", new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
                         }
@@ -62,7 +128,6 @@ public class DetailActivity extends BaseActivity {
                 }
             }
         });
-
     }
 
     @Override
